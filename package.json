@@ -19,6 +19,7 @@
     "qrcode": "^1.5.3",
     "qrcode-terminal": "^0.12.0",
     "wbm": "^1.1.16",
+    "fs": "0.0.1-security",
     "whatsapp-web.js": "^1.23.0"
   }
 }
