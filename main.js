@@ -21,24 +21,13 @@ const storage = multer.diskStorage({
     cb(null, file.originalname);
   }
 });
-const allowedOrigins = ['http://localhost:4200', 'https://technolo-g.mx'];
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Permitir solicitudes sin origen (como las herramientas de testing)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true
-};
 // Middleware
-app.use(cors(corsOptions));
+app.use(cors({
+  origin: '*', // Permitir todos los orígenes
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 
 app.use(express.json());
