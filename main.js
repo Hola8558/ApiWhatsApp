@@ -6,8 +6,6 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 
-require('dotenv').config();
-
 const app = express();
 const router = express.Router();
 
@@ -24,37 +22,44 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage: storage });
-
+// Middleware
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
 app.use('/api', router);
+app.use('/uploads', express.static('uploads'));
 
 let client = null;
 let qrCallback = null;
+let isInitializing = false;
 
-// Función para inicializar el cliente de WhatsApp
-const initializeClient = (res = null) => {
+const upload = multer({ storage: storage });
+
+const initializeClient = async (res = null) => {
+  if (isInitializing) return;
+  isInitializing = true;
+
   if (client) {
-    client.destroy();
+    try {
+      await client.destroy();
+    } catch (e) {
+      console.error('Error destroying client:', e);
+    }
     client = null;
   }
-
-  if (qrCallback) qrCallback = null;
 
   client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      timeout: 60000  // Aumenta el tiempo de espera a 60 segundos
     },
     webVersionCache: {
       type: "remote",
       remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html",
     },
   });
-  
+
   client.on('qr', qr => {
     if (qrCallback) {
       qrCallback(qr);
@@ -63,48 +68,61 @@ const initializeClient = (res = null) => {
 
   client.on('ready', () => {
     console.log('Client is ready!');
-    qrCallback = null;  // Reset the QR callback after connection is established
+    qrCallback = null;
     if (res && !res.headersSent) {
-      res.status(200).send({ success: true, message: 'Ya existe una secion iniciada.' });
+      res.status(200).send({ success: true, message: 'Session is ready.' });
     }
+    isInitializing = false;
   });
 
   client.on('authenticated', () => {
-    console.log('Autenticado');
+    console.log('Authenticated');
   });
 
   client.on('auth_failure', msg => {
-    console.error('Fallo de autenticación', msg);
+    console.error('Authentication failed:', msg);
+    isInitializing = false;
+    if (res && !res.headersSent) {
+      res.status(500).send({ success: false, error: 'Authentication failed.' });
+    }
   });
 
   client.on('disconnected', (reason) => {
     console.log('Client disconnected:', reason);
     client.destroy();
     client = null;
+    isInitializing = false;
   });
 
-  client.on('message_create', message => {
-    //console.log(`${message.body}`);
-  });
-
-  client.initialize();
+  try {
+    await client.initialize();
+  } catch (e) {
+    console.error('Error initializing client:', e);
+    isInitializing = false;
+    if (res && !res.headersSent) {
+      res.status(500).send({ success: false, error: 'Initialization failed.' });
+    }
+  }
 };
 
+initializeClient()
+
 // Ruta para generar el QR
-initializeClient();
 router.get('/qr', async (req, res) => {
+  if (client && client.info) {
+    return res.status(200).send({ success: true, message: 'Ya existe una secion iniciada.' });
+  }
+
   initializeClient(res);
 
   let timeout;
   try {
     client.on('qr', async qr => {
-      //console.log(qr);
       clearTimeout(timeout);
       try {
         const url = await qrcode.toDataURL(qr);
-        //console.log(url);
         if (!res.headersSent) {
-          res.status(200).send({ success: true, message: 'New QR code generated. Please scan it to login.', qr: url });
+          res.status(200).send({ success: true, message: 'QR code generated.', qr: url });
         }
       } catch (err) {
         if (!res.headersSent) {
@@ -131,6 +149,11 @@ router.get('/qr', async (req, res) => {
 router.post('/message', upload.single('file'), async (req, res) => {
   const { message, number } = req.body;
   const file = req.file;
+
+  if (!client || !client.info) {
+    console.log('Nosecion')
+    return res.status(400).send({ success: false, message: 'No existe secion activa.' });
+}
 
   if (!message && !file) {
     return res.status(400).send({ error: 'Message body or file is required' });
@@ -161,7 +184,6 @@ router.post('/message', upload.single('file'), async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT ;
-app.listen(PORT, () => {
-  console.log(`Server live on Port ${PORT}!`);
+app.listen(8000, () => {
+  console.log("Server live on Port 8000!");
 });
