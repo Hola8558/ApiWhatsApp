@@ -25,8 +25,9 @@ const storage = multer.diskStorage({
 // Middleware
 app.use(cors({
   origin: '*', // Permitir todos los orígenes
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 
 
@@ -128,6 +129,7 @@ router.get('/qr', async (req, res) => {
       try {
         const url = await qrcode.toDataURL(qr);
         if (!res.headersSent) {
+          console.log(url);
           res.status(200).send({ success: true, message: 'QR code generated.', qr: url });
         }
       } catch (err) {
