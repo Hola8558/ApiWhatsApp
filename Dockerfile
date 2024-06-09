@@ -30,6 +30,7 @@ COPY package*.json ./
 
 # Instala las dependencias del proyecto
 RUN npm install
+RUN npm i cors
 
 # Copia el resto de los archivos del proyecto
 COPY . .
