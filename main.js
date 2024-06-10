@@ -5,6 +5,7 @@ const cors = require('cors');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config()
 
 const app = express();
 const router = express.Router();
@@ -193,7 +194,7 @@ router.post('/message', upload.single('file'), async (req, res) => {
     res.status(500).send({ success: false, error: err.message });
   }
 });
-
-app.listen(8000, () => {
-  console.log("Server live on Port 8000!");
+const Port = process.env.PORT;
+app.listen(Port, () => {
+  console.log(`Server live on Port ${Port}!`);
 });
