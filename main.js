@@ -124,6 +124,7 @@ router.get('/qr', async (req, res) => {
 
   let timeout;
   try {
+    console.log('Intentando Qr');
     client.on('qr', async qr => {
       clearTimeout(timeout);
       try {
