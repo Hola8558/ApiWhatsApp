@@ -122,12 +122,12 @@ router.get('/qr', async (req, res) => {
 
   initializeClient(res);
 
-  let timeout;
+  //let timeout;
   try {
     console.log('Intentando Qr');
     client.on('qr', async qr => {
       console.log('Geting Qr');
-      clearTimeout(timeout);
+      //clearTimeout(timeout);
       try {
         const url = await qrcode.toDataURL(qr);
         if (!res.headersSent) {
