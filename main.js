@@ -8,6 +8,8 @@ const fs = require('fs');
 const rimraf = require('rimraf');
 const path = require('path');
 
+require('dotenv').config()
+
 const app = express();
 const router = express.Router();
 
@@ -219,6 +221,7 @@ router.post('/message/:sessionId', upload.single('file'), async (req, res) => {
   }
 });
 
-app.listen(8000, () => {
-  console.log(`Server live on Port 8000!`);
+const PORT = process.env.PORT;
+app.listen(PORT, () => {
+  console.log(`Server live on Port ${PORT}!`);
 });

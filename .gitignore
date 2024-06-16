@@ -1,7 +1,9 @@
 .gitignore
-.env
+
 /.wwebjs_auth
 /node_modules
+*.env
+*.stage.env
 /functions
 /pdf
 
