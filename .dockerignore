@@ -1,0 +1,21 @@
+# flyctl launch added from .gitignore
+**\.gitignore
+**\.env
+.wwebjs_auth
+node_modules
+functions
+pdf
+
+**\firebase.json
+**\firestore.indexes.json
+**\firestore.rules
+**\.firebaserc
+
+# flyctl launch added from functions\.gitignore
+functions\**\node_modules
+functions\**\*.local
+
+# flyctl launch added from pdf\.gitignore
+pdf\**\node_modules
+pdf\**\*.local
+fly.toml

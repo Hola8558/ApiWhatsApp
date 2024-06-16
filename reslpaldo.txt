@@ -1,12 +1,11 @@
-//const functions = require('firebase-functions')
 const express = require('express');
 const { Client, MessageMedia, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
 const cors = require('cors');
 const multer = require('multer');
 const fs = require('fs');
-const rimraf = require('rimraf');
 const path = require('path');
+require('dotenv').config()
 
 const app = express();
 const router = express.Router();
@@ -24,43 +23,44 @@ const storage = multer.diskStorage({
   }
 });
 
-
-
 // Middleware
 app.use(cors({
-  origin: '*',
+  origin: '*', // Permitir todos los orígenes
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   preflightContinue: false,
   optionsSuccessStatus: 204
 }));
 
+
 app.use(express.json());
 app.use('/api', router);
 app.use('/uploads', express.static('uploads'));
 
-const clientsIds = [];
-const clients = new Map(); // Store multiple client instances
-const qrCallbacks = new Map(); // Store QR callbacks for each client
+let client = null;
+let qrCallback = null;
+let isInitializing = false;
+
 const upload = multer({ storage: storage });
 
-const initializeClient = async (sessionId, res = null) => {
-  if (clients.has(sessionId)) {
-    const existingData = clients.get(sessionId);
-    if (existingData.client && existingData.client.isReady) {
-      return;
+const initializeClient = async (res = null) => {
+  if (isInitializing) return;
+  isInitializing = true;
+
+  if (client) {
+    try {
+      await client.destroy();
+    } catch (e) {
+      console.error('Error destroying client:', e);
     }
+    client = null;
   }
 
-  clients.set(sessionId, { isInitializing: true });
-
-  let client = clients.get(sessionId).client;
-  if (!client)
   client = new Client({
-    authStrategy: new LocalAuth({ clientId: sessionId }),
+    authStrategy: new LocalAuth(),
     puppeteer: {
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      timeout: 60000
+      timeout: 60000  // Aumenta el tiempo de espera a 60 segundos
     },
     webVersionCache: {
       type: "remote",
@@ -69,81 +69,70 @@ const initializeClient = async (sessionId, res = null) => {
   });
 
   client.on('qr', qr => {
-    const callback = qrCallbacks.get(sessionId);
-    if (callback) {
-      callback(qr);
+    if (qrCallback) {
+      qrCallback(qr);
     }
   });
 
   client.on('ready', () => {
-    console.log(`Client ${sessionId} is ready!`);
-    qrCallbacks.delete(sessionId);
-    clients.set(sessionId, { client, isInitializing: false });
+    console.log('Client is ready!');
+    qrCallback = null;
     if (res && !res.headersSent) {
       res.status(200).send({ success: true, message: 'Session is ready.' });
     }
+    isInitializing = false;
   });
+
   client.on('authenticated', () => {
-    console.log(`Client ${sessionId} authenticated`);
-    clientsIds.push(sessionId)
+    console.log('Authenticated');
   });
-  
+
   client.on('auth_failure', msg => {
-    console.error(`Authentication failed for ${sessionId}:`, msg);
-    clients.delete(sessionId);
+    console.error('Authentication failed:', msg);
+    isInitializing = false;
     if (res && !res.headersSent) {
       res.status(500).send({ success: false, error: 'Authentication failed.' });
     }
   });
 
-  client.on('disconnected', async (reason) => {
-    console.log(`Client ${sessionId} disconnected:`, reason);
+  client.on('disconnected', (reason) => {
+    console.log('Client disconnected:', reason);
     client.destroy();
-    clients.delete(sessionId);
-    setTimeout(() => {
-      deleteDirectory(`./.wwebjs_auth/session-${sessionId}`);
-  }, 1000);
+    client = null;
+    isInitializing = false;
   });
 
   try {
     await client.initialize();
   } catch (e) {
-    console.error(`Error initializing client ${sessionId}:`, e);
-    clients.delete(sessionId);
+    console.error('Error initializing client:', e);
+    isInitializing = false;
     if (res && !res.headersSent) {
       res.status(500).send({ success: false, error: 'Initialization failed.' });
     }
   }
 };
 
-async function deleteDirectory(directory) {
-  try {
-      await new Promise((resolve, reject) => {
-          rimraf(directory, (err) => {
-              if (err) return reject(err);
-              resolve();
-          });
-      });
-      console.log('Session Removed');
-  } catch (err) {
-      console.error('Something wrong happened removing the session', err);
-  }
-}
+initializeClient()
 
-router.get('/qr/:sessionId', async (req, res) => {
-  const { sessionId } = req.params;
-
-  if (clients.has(sessionId) && clients.get(sessionId).client && clients.get(sessionId).client.info) {
-    return res.status(200).send({ success: true, message: 'Ya existe una sesión iniciada.' });
+// Ruta para generar el QR
+router.get('/qr', async (req, res) => {
+  if (client && client.info) {
+    return res.status(200).send({ success: true, message: 'Ya existe una secion iniciada.' });
   }
 
-  initializeClient(sessionId, res);
+  initializeClient(res);
 
+  //let timeout;
   try {
-    qrCallbacks.set(sessionId, async qr => {
+    console.log('Intentando Qr');
+    client.on('qr', async qr => {
+      console.log('Geting Qr');
+      //clearTimeout(timeout);
       try {
         const url = await qrcode.toDataURL(qr);
         if (!res.headersSent) {
+          console.log(url);
           res.status(200).send({ success: true, message: 'QR code generated.', qr: url });
         }
       } catch (err) {
@@ -153,40 +142,29 @@ router.get('/qr/:sessionId', async (req, res) => {
       }
     });
 
-    setTimeout(() => {
+    timeout = setTimeout(() => {
       if (!res.headersSent) {
         res.status(408).send({ success: false, message: 'QR code scan timeout. Please try again.' });
       }
     }, 60000); // Timeout after 60 seconds
 
   } catch (err) {
-    qrCallbacks.delete(sessionId);
+    qrCallback = null;  // Reset the callback on error
     if (!res.headersSent) {
       res.status(500).send({ success: false, error: err.message });
     }
   }
 });
 
-router.get('/login/:sessionId' , async (req, res) => {
-  const { sessionId }  = req.params;
-  
-  for (let i = 0; i < clientsIds.length; i++){
-    if (clientsIds[i] === sessionId)
-      return res.status(200).send({success:true, message: 'Concexión con wsp exitosa.'});
-  }
-
-  initializeClient(sessionId, res);
-})
-
 // Ruta para enviar mensajes
-router.post('/message/:sessionId', upload.single('file'), async (req, res) => {
-  const { sessionId } = req.params;
+router.post('/message', upload.single('file'), async (req, res) => {
   const { message, number } = req.body;
   const file = req.file;
-  const clientData = clients.get(sessionId);
-  if (!clientData || !clientData.client || !clientData.client.info) {
-    return res.status(400).send({ success: false, message: 'No existe sesión activa.' });
-  }
+
+  if (!client || !client.info) {
+    console.log('Nosecion')
+    return res.status(400).send({ success: false, message: 'No existe secion activa.' });
+}
 
   if (!message && !file) {
     return res.status(400).send({ error: 'Message body or file is required' });
@@ -194,12 +172,11 @@ router.post('/message/:sessionId', upload.single('file'), async (req, res) => {
 
   const recipient = `521${number}@c.us`;
 
-  console.log(`Sending message to: ${recipient}`);
   try {
     let response;
     if (file) {
       const media = MessageMedia.fromFilePath(file.path);
-      response = await clientData.client.sendMessage(recipient, media, { caption: message });
+      response = await client.sendMessage(recipient, media, { caption: message });
       // Eliminar el archivo después de enviarlo
       fs.unlink(file.path, (err) => {
         if (err) {
@@ -209,16 +186,15 @@ router.post('/message/:sessionId', upload.single('file'), async (req, res) => {
         }
       });
     } else {
-      response = await clientData.client.sendMessage(recipient, message);
+      response = await client.sendMessage(recipient, message);
     }
-    //console.log('Message sent:', response);
     res.status(200).send({ success: true, response });
   } catch (err) {
     console.error('Message sending error', err);
     res.status(500).send({ success: false, error: err.message });
   }
 });
-
-app.listen(8000, () => {
-  console.log(`Server live on Port 8000!`);
+const Port = process.env.PORT;
+app.listen(Port, () => {
+  console.log(`Server live on Port ${Port}!`);
 });
