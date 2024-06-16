@@ -15,7 +15,7 @@ const router = express.Router();
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, 'uploads');
+    const uploadPath = path.join(__dirname, '/.webjs_auth/uploads');
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath);
     }
