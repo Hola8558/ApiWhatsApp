@@ -198,8 +198,8 @@ router.post('/messageTest', async (req, res) => {
         console.error('Error writing file:', err);
         throw err;
       }
-      console.log('JSON file has been saved.');
-    });
+      });
+    console.log('JSON file has been saved.');
     return res.status(200).send({msg:'Exito guardadno'})
   } catch (e){
     return res.status(208).send({err:e})
@@ -213,20 +213,20 @@ router.get('/messageTest', async (req, res) => {
       const fileName = 'prueba.json';
       const filePath = path.join(folderPath, fileName);
 
-      if (!fsSync.existsSync('./.wwebjs_auth/prueba.json')) {
+      if (!fsSync.existsSync('/.wwebjs_auth/prueba.json')) {
         throw new Error(`File does not exist: ${filePath}`);
       }
       
       // Leer el archivo JSON
-      const jsonString = fs.readdirSync('./.wwebjs_auth').filter(file => path.extname(file) === '.json');
-      const fileData = fs.readFileSync(path.join('./.wwebjs_auth', jsonString[0]));
+      const jsonString = fs.readdirSync('/.wwebjs_auth').filter(file => path.extname(file) === '.json');
+      const fileData = fs.readFileSync(path.join('/.wwebjs_auth', jsonString[0]));
       // Convertir la cadena JSON a un objeto
       const jsonData = JSON.parse(fileData);
 
       // Retornar el contenido del JSON
       return res.status(200).send(jsonData);
     } catch (e){
-      return res.status(208).send({err:e})
+      return res.status(208).send({err:e.message})
     }
 })
 
