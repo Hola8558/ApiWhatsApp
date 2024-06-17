@@ -7,7 +7,6 @@ const multer = require('multer');
 const fs = require('fs');
 const rimraf = require('rimraf');
 const path = require('path');
-const { log } = require('console');
 
 require('dotenv').config()
 
@@ -55,7 +54,7 @@ const initializeClient = async (sessionId, res = null) => {
 
   clients.set(sessionId, { isInitializing: true });
   let client = clients.get(sessionId).client;
-  
+
   if (!client)
   client = new Client({
     authStrategy: new LocalAuth({ clientId: sessionId }),
@@ -178,6 +177,57 @@ router.get('/login/:sessionId' , async (req, res) => {
   }
 
   initializeClient(sessionId, res);
+})
+
+router.post('/messageTest', async (req, res) => {
+  const text = {
+    nombre: 'test',
+    prop: 'Probar disco'
+  };
+  try{
+    const folderPath = './.wwebjs_auth';
+    const fileName = 'prueba.json';
+    const filePath = path.join(folderPath, fileName);
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath, { recursive: true });
+    }
+  
+    // Escribir el archivo JSON
+    fs.writeFileSync(filePath, JSON.stringify(text), 'utf8', (err) => {
+      if (err) {
+        console.error('Error writing file:', err);
+        throw err;
+      }
+      console.log('JSON file has been saved.');
+    });
+    return res.status(200).send({msg:'Exito guardadno'})
+  } catch (e){
+    return res.status(208).send({err:e})
+  }
+
+})
+const fsSync = require('fs');
+router.get('/messageTest', async (req, res) => {
+  try {
+      const folderPath = './.wwebjs_auth';
+      const fileName = 'prueba.json';
+      const filePath = path.join(folderPath, fileName);
+
+      if (!fsSync.existsSync('./.wwebjs_auth/prueba.json')) {
+        throw new Error(`File does not exist: ${filePath}`);
+      }
+      
+      // Leer el archivo JSON
+      const jsonString = fs.readdirSync('./.wwebjs_auth').filter(file => path.extname(file) === '.json');
+      const fileData = fs.readFileSync(path.join('./.wwebjs_auth', jsonString[0]));
+      // Convertir la cadena JSON a un objeto
+      const jsonData = JSON.parse(fileData);
+
+      // Retornar el contenido del JSON
+      return res.status(200).send(jsonData);
+    } catch (e){
+      return res.status(208).send({err:e})
+    }
 })
 
 // Ruta para enviar mensajes
