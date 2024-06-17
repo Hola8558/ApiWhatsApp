@@ -7,6 +7,7 @@ const multer = require('multer');
 const fs = require('fs');
 const rimraf = require('rimraf');
 const path = require('path');
+const { log } = require('console');
 
 require('dotenv').config()
 
@@ -15,7 +16,7 @@ const router = express.Router();
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '/.webjs_auth/uploads');
+    const uploadPath = path.join(__dirname, '/.wwebjs_auth/uploads');
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath);
     }
@@ -25,8 +26,6 @@ const storage = multer.diskStorage({
     cb(null, file.originalname);
   }
 });
-
-
 
 // Middleware
 app.use(cors({
@@ -46,6 +45,7 @@ const qrCallbacks = new Map(); // Store QR callbacks for each client
 const upload = multer({ storage: storage });
 
 const initializeClient = async (sessionId, res = null) => {
+  console.log(clients);
   if (clients.has(sessionId)) {
     const existingData = clients.get(sessionId);
     if (existingData.client && existingData.client.isReady) {
@@ -54,8 +54,8 @@ const initializeClient = async (sessionId, res = null) => {
   }
 
   clients.set(sessionId, { isInitializing: true });
-
   let client = clients.get(sessionId).client;
+  
   if (!client)
   client = new Client({
     authStrategy: new LocalAuth({ clientId: sessionId }),
@@ -171,7 +171,7 @@ router.get('/qr/:sessionId', async (req, res) => {
 
 router.get('/login/:sessionId' , async (req, res) => {
   const { sessionId }  = req.params;
-  
+  console.log(`To Loggin ${sessionId}`);
   for (let i = 0; i < clientsIds.length; i++){
     if (clientsIds[i] === sessionId)
       return res.status(200).send({success:true, message: 'Concexión con wsp exitosa.'});
