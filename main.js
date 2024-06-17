@@ -185,7 +185,7 @@ router.post('/messageTest', async (req, res) => {
     prop: 'Probar disco'
   };
   try{
-    const folderPath = './.wwebjs_auth';
+    const folderPath = '/.wwebjs_auth';
     const fileName = 'prueba.json';
     const filePath = path.join(folderPath, fileName);
     if (!fs.existsSync(folderPath)) {
