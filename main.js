@@ -44,7 +44,6 @@ const qrCallbacks = new Map(); // Store QR callbacks for each client
 const upload = multer({ storage: storage });
 
 const initializeClient = async (sessionId, res = null) => {
-  console.log(clients);
   if (clients.has(sessionId)) {
     const existingData = clients.get(sessionId);
     if (existingData.client && existingData.client.isReady) {
@@ -57,7 +56,11 @@ const initializeClient = async (sessionId, res = null) => {
 
   if (!client)
   client = new Client({
-    authStrategy: new LocalAuth({ clientId: sessionId }),
+    authStrategy: new LocalAuth({ 
+      clientId: sessionId,
+      dataPath: '/.wwebjs_auth'
+     }),
+    
     puppeteer: {
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
@@ -102,7 +105,7 @@ const initializeClient = async (sessionId, res = null) => {
     client.destroy();
     clients.delete(sessionId);
     setTimeout(() => {
-      deleteDirectory(`./.wwebjs_auth/session-${sessionId}`);
+      deleteDirectory(`/.wwebjs_auth/session-${sessionId}`);
   }, 1000);
   });
 
