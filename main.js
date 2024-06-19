@@ -249,43 +249,6 @@ router.post('/message/:sessionId', upload.single('file'), async (req, res) => {
 
   const recipient = `521${number}@c.us`;
 
-
-  //const response = await drive.files.create({
-  //  requestBosy:{
-  //    name: file.name
-  //  },
-  //  media:{
-  //    body:file
-  //  }
-  //})
-//
-  //console.log(response);
-//
-  //const id = response.data.id;
-  //await drive.permissions.create({
-  //  fileId:id,
-  //  requestBody: {
-  //    role:'reader',
-  //    type:'anyone'
-  //  }
-  //})
-//
-  //const result = await drive.files.get({
-  //  fileId:id,
-  //  fields:'webViewLink, webContentLink'
-  //})
-  //console.log(result);
-  //const msg = message + ` este enlace vence en 24 horas ${result.data}`
-  //const responseDOs = await clientData.client.sendMessage(recipient, media, { caption: msg });
-//
-  //fs.unlink(file.path, (err) => {
-  //  if (err) {
-  //    console.error(`Error deleting file ${file.path}:`, err);
-  //  } else {
-  //    console.log(`File ${file.path} deleted successfully.`);
-  //  }
-  //});
-  //res.status(200).send({ success: true, responseDOs });
   console.log(`Sending message to: ${recipient}`);
   try {
     let response;
