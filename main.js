@@ -7,6 +7,24 @@ const multer = require('multer');
 const fs = require('fs');
 const rimraf = require('rimraf');
 const path = require('path');
+const { google } = require('googleapis');
+
+//const ID = '322713451639-ov6fph229t7vs5g4a4ffi596cjr0un1q.apps.googleusercontent.com';
+//const SCRET = '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';
+//const DIRECT_URI = 'https://developers.google.com/oauthplayground';
+//const REFRES_TOKEN = '1//044MpTlH-WiKcCgYIARAAGAQSNwF-L9IrYc_CixcWhZkB5GneDC0Hi_ugiBMz0Tu0WKIlzL8rgV76p9uT8ElRcrX8DxHuOovN-yE';
+//
+//const oAuth2Client = new google.auth.OAuth2(
+//  ID,
+//  SCRET, DIRECT_URI
+//)
+//
+//oAuth2Client.setCredentials({refreshToken: REFRES_TOKEN});
+//
+//const drive = google.drive({
+//  version: 'v3',
+//  auth: oAuth2Client
+//})
 
 require('dotenv').config()
 
@@ -249,6 +267,43 @@ router.post('/message/:sessionId', upload.single('file'), async (req, res) => {
 
   const recipient = `521${number}@c.us`;
 
+
+  //const response = await drive.files.create({
+  //  requestBosy:{
+  //    name: file.name
+  //  },
+  //  media:{
+  //    body:file
+  //  }
+  //})
+//
+  //console.log(response);
+//
+  //const id = response.data.id;
+  //await drive.permissions.create({
+  //  fileId:id,
+  //  requestBody: {
+  //    role:'reader',
+  //    type:'anyone'
+  //  }
+  //})
+//
+  //const result = await drive.files.get({
+  //  fileId:id,
+  //  fields:'webViewLink, webContentLink'
+  //})
+  //console.log(result);
+  //const msg = message + ` este enlace vence en 24 horas ${result.data}`
+  //const responseDOs = await clientData.client.sendMessage(recipient, media, { caption: msg });
+//
+  //fs.unlink(file.path, (err) => {
+  //  if (err) {
+  //    console.error(`Error deleting file ${file.path}:`, err);
+  //  } else {
+  //    console.log(`File ${file.path} deleted successfully.`);
+  //  }
+  //});
+  //res.status(200).send({ success: true, responseDOs });
   console.log(`Sending message to: ${recipient}`);
   try {
     let response;
