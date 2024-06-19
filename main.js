@@ -7,24 +7,6 @@ const multer = require('multer');
 const fs = require('fs');
 const rimraf = require('rimraf');
 const path = require('path');
-const { google } = require('googleapis');
-
-//const ID = '322713451639-ov6fph229t7vs5g4a4ffi596cjr0un1q.apps.googleusercontent.com';
-//const SCRET = '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';
-//const DIRECT_URI = 'https://developers.google.com/oauthplayground';
-//const REFRES_TOKEN = '1//044MpTlH-WiKcCgYIARAAGAQSNwF-L9IrYc_CixcWhZkB5GneDC0Hi_ugiBMz0Tu0WKIlzL8rgV76p9uT8ElRcrX8DxHuOovN-yE';
-//
-//const oAuth2Client = new google.auth.OAuth2(
-//  ID,
-//  SCRET, DIRECT_URI
-//)
-//
-//oAuth2Client.setCredentials({refreshToken: REFRES_TOKEN});
-//
-//const drive = google.drive({
-//  version: 'v3',
-//  auth: oAuth2Client
-//})
 
 require('dotenv').config()
 
