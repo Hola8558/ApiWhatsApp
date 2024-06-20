@@ -7,11 +7,17 @@ const multer = require('multer');
 const fs = require('fs');
 const rimraf = require('rimraf');
 const path = require('path');
+const bodyParser = require('body-parser');
 
 require('dotenv').config()
 
 const app = express();
 const router = express.Router();
+
+// Aumentar el límite de tamaño permitido
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -134,6 +140,18 @@ async function deleteDirectory(directory) {
   }
 }
 
+router.post('/deleteAllSessions', async (req, res) => {
+  console.log('ci');
+  try{
+
+    deleteDirectory(`/.wwebjs_auth`);
+    res.status(200).send({success:true});
+  }catch(e){
+    res.status(500).send({msg: e.message});
+  }
+  
+})
+
 router.get('/qr/:sessionId', async (req, res) => {
   const { sessionId } = req.params;
 
@@ -182,62 +200,9 @@ router.get('/login/:sessionId' , async (req, res) => {
   initializeClient(sessionId, res);
 })
 
-router.post('/messageTest', async (req, res) => {
-  const text = {
-    nombre: 'test',
-    prop: 'Probar disco'
-  };
-  try{
-    const folderPath = '/.wwebjs_auth';
-    const fileName = 'prueba.json';
-    const filePath = path.join(folderPath, fileName);
-    if (!fs.existsSync(folderPath)) {
-      fs.mkdirSync(folderPath, { recursive: true });
-    }
-  
-    // Escribir el archivo JSON
-    fs.writeFileSync(filePath, JSON.stringify(text), 'utf8', (err) => {
-      if (err) {
-        console.error('Error writing file:', err);
-        throw err;
-      }
-      });
-    console.log('JSON file has been saved.');
-    return res.status(200).send({msg:'Exito guardadno'})
-  } catch (e){
-    return res.status(208).send({err:e})
-  }
-
-})
-const fsSync = require('fs');
-router.get('/messageTest', async (req, res) => {
-  try {
-      const folderPath = './.wwebjs_auth';
-      const fileName = 'prueba.json';
-      const filePath = path.join(folderPath, fileName);
-
-      if (!fsSync.existsSync('/.wwebjs_auth/prueba.json')) {
-        throw new Error(`File does not exist: ${filePath}`);
-      }
-      
-      // Leer el archivo JSON
-      const jsonString = fs.readdirSync('/.wwebjs_auth').filter(file => path.extname(file) === '.json');
-      const fileData = fs.readFileSync(path.join('/.wwebjs_auth', jsonString[0]));
-      // Convertir la cadena JSON a un objeto
-      const jsonData = JSON.parse(fileData);
-
-      // Retornar el contenido del JSON
-      return res.status(200).send(jsonData);
-    } catch (e){
-      return res.status(208).send({err:e.message})
-    }
-})
-
-// Ruta para enviar mensajes
-router.post('/message/:sessionId', upload.single('file'), async (req, res) => {
+router.post('/message/:sessionId', async (req, res) => {
   const { sessionId } = req.params;
-  const { message, number } = req.body;
-  const file = req.file;
+  const { message, number, file, nameFile } = req.body;
   const clientData = clients.get(sessionId);
   if (!clientData || !clientData.client || !clientData.client.info) {
     return res.status(400).send({ success: false, message: 'No existe sesión activa.' });
@@ -253,19 +218,27 @@ router.post('/message/:sessionId', upload.single('file'), async (req, res) => {
   try {
     let response;
     if (file) {
-      const media = MessageMedia.fromFilePath(file.path);
+      const base64Data = file.replace(/^data:application\/pdf;base64,/, '');
+
+      // Buffer the base64 string
+      const pdfBuffer = Buffer.from(base64Data, 'base64');
+    
+      // Write the buffer to a file
+      const filePath = nameFile;
+      fs.writeFileSync(filePath, pdfBuffer);
+      const media = MessageMedia.fromFilePath(filePath);
       response = await clientData.client.sendMessage(recipient, media, { caption: message });
-      // Eliminar el archivo después de enviarlo
-      fs.unlink(file.path, (err) => {
-        if (err) {
-          console.error(`Error deleting file ${file.path}:`, err);
-        } else {
-          console.log(`File ${file.path} deleted successfully.`);
-        }
-      });
     } else {
       response = await clientData.client.sendMessage(recipient, message);
     }
+
+    fs.unlink(nameFile, (err) => {
+      if (err) {
+        console.error(`Error deleting file ${nameFile}:`, err);
+      } else {
+        console.log(`File ${nameFile} deleted successfully.`);
+      }
+    });
     //console.log('Message sent:', response);
     res.status(200).send({ success: true, response });
   } catch (err) {
@@ -273,6 +246,47 @@ router.post('/message/:sessionId', upload.single('file'), async (req, res) => {
     res.status(500).send({ success: false, error: err.message });
   }
 });
+
+// Ruta para enviar mensajes
+//router.post('/message/:sessionId', upload.single('file'), async (req, res) => {
+//  const { sessionId } = req.params;
+//  const { message, number } = req.body;
+//  const file = req.file;
+//  const clientData = clients.get(sessionId);
+//  if (!clientData || !clientData.client || !clientData.client.info) {
+//    return res.status(400).send({ success: false, message: 'No existe sesión activa.' });
+//  }
+//
+//  if (!message && !file) {
+//    return res.status(400).send({ error: 'Message body or file is required' });
+//  }
+//
+//  const recipient = `521${number}@c.us`;
+//
+//  console.log(`Sending message to: ${recipient}`);
+//  try {
+//    let response;
+//    if (file) {
+//      const media = MessageMedia.fromFilePath(file.path);
+//      response = await clientData.client.sendMessage(recipient, media, { caption: message });
+//      // Eliminar el archivo después de enviarlo
+//      fs.unlink(file.path, (err) => {
+//        if (err) {
+//          console.error(`Error deleting file ${file.path}:`, err);
+//        } else {
+//          console.log(`File ${file.path} deleted successfully.`);
+//        }
+//      });
+//    } else {
+//      response = await clientData.client.sendMessage(recipient, message);
+//    }
+//    //console.log('Message sent:', response);
+//    res.status(200).send({ success: true, response });
+//  } catch (err) {
+//    console.error('Message sending error', err);
+//    res.status(500).send({ success: false, error: err.message });
+//  }
+//});
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
